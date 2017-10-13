@@ -107,6 +107,13 @@ void apollo_app_sigint_handler(int signal_num);
 }  // namespace common
 }  // namespace apollo
 
+/*
+* 宏APOLLO_MAIN实现：
+* 1. 函数前三行是一般程序设计套路，第一行是log相关设置；第二行是命令行分析；第三行是节点中断信号的处理。
+* 2. 实例化一个模块对象。
+* 3. 初始化节点，并命名。
+* 4. 调用模块Spin()函数。模块的Spin()函数会依次调用模块的init和start函数。以启动模块。
+*/
 #define APOLLO_MAIN(APP)                                       \
   int main(int argc, char **argv) {                            \
     google::InitGoogleLogging(argv[0]);                        \

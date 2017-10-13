@@ -31,12 +31,18 @@ std::string Localization::Name() const {
   return FLAGS_localization_module_name;
 }
 
+/*
+* 作用： 注册定位方法RTK
+*/
 void Localization::RegisterLocalizationMethods() {
   localization_factory_.Register(
       LocalizationConfig::RTK,
       []() -> LocalizationBase* { return new RTKLocalization(); });
 }
 
+/*
+* 作用：调用定位注册函数，读取配置文件到config_中
+*/
 Status Localization::Init() {
   RegisterLocalizationMethods();
   if (!apollo::common::util::GetProtoFromFile(FLAGS_localization_config_file,
@@ -51,6 +57,10 @@ Status Localization::Init() {
   return Status::OK();
 }
 
+/*
+* 使用localization_factory_和localization_type，实例化一个localization。
+* 然后调用实例化后的localization的start函数。
+*/
 Status Localization::Start() {
   localization_ =
       localization_factory_.CreateObject(config_.localization_type());

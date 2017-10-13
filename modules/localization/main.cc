@@ -16,5 +16,7 @@
 
 #include "modules/common/apollo_app.h"
 #include "modules/localization/localization.h"
-
+/*
+* 使用APOLLO_MAIN宏，创建了一个Localization节点。
+*/
 APOLLO_MAIN(apollo::localization::Localization)
