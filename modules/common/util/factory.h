@@ -67,6 +67,12 @@ class Factory {
    * the registered class
    * @return True iff the key id is still available
    */
+  /*
+  * 根据creator函数，创建一个类，并将之和一个id联系起来。
+  * creator：返回一个指向一个已经注册的类的一个对象。
+  * id: key值
+  * producers_ 是个map 容器类型。
+  */
   bool Register(const IdentifierType &id, ProductCreator creator) {
     return producers_.insert(std::make_pair(id, creator)).second;
   }
@@ -85,6 +91,11 @@ class Factory {
    * @param id The identifier of the class we which to instantiate
    * @param args the object construction arguments
    */
+  /*
+  * 功能：创建对象。
+  * id： 创建对象所使用类的id。
+  * args： 创建对象的构造函数。
+  */
   template <typename... Args>
   std::unique_ptr<AbstractProduct> CreateObject(const IdentifierType &id,
                                                 Args... args) {
@@ -98,6 +109,9 @@ class Factory {
     }
   }
 
+/*
+* 存放注册的类，每个类有一个id。
+*/
  private:
   MapContainer producers_;
 };
