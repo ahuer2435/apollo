@@ -31,17 +31,25 @@ using apollo::common::monitor::MonitorMessageItem;
 using apollo::common::Status;
 using apollo::common::time::Clock;
 
+/*
+* 构造函数初始化变量monitor_和map_offset_
+*/
 RTKLocalization::RTKLocalization()
     : monitor_(MonitorMessageItem::LOCALIZATION),
       map_offset_{FLAGS_map_offset_x, FLAGS_map_offset_y, FLAGS_map_offset_z} {}
-
+/*
+* 读取配置文件，创建nodehandler及相应topic。
+* 定义一个timer，周期处理定位。
+* 检查gps和imu数据是否正常输入（在adapter_manager.h类似gps.get()函数没找到在哪？）
+* 返回start()结果
+*/
 Status RTKLocalization::Start() {
-  AdapterManager::Init(FLAGS_rtk_adapter_config_file);
+  AdapterManager::Init(FLAGS_rtk_adapter_config_file);  //根据配置文件创建nodehandler和相应topic的创建。
 
   // start ROS timer, one-shot = false, auto-start = true
-  const double duration = 1.0 / FLAGS_localization_publish_freq;
+  const double duration = 1.0 / FLAGS_localization_publish_freq;    
   timer_ = AdapterManager::CreateTimer(ros::Duration(duration),
-                                       &RTKLocalization::OnTimer, this);
+                                       &RTKLocalization::OnTimer, this);    //定义一个timer
   common::monitor::MonitorBuffer buffer(&monitor_);
   if (!AdapterManager::GetGps()) {
     buffer.ERROR() << "GPS input not initialized. Check file "
@@ -64,7 +72,7 @@ Status RTKLocalization::Stop() {
 
 void RTKLocalization::OnTimer(const ros::TimerEvent &event) {
   double time_delay =
-      common::time::ToSecond(Clock::Now()) - last_received_timestamp_sec_;
+      common::time::ToSecond(Clock::Now()) - last_received_timestamp_sec_;  //超时检测。
   common::monitor::MonitorBuffer buffer(&monitor_);
   if (FLAGS_enable_gps_timestamp &&
       time_delay > FLAGS_gps_time_delay_tolerance) {
@@ -73,9 +81,9 @@ void RTKLocalization::OnTimer(const ros::TimerEvent &event) {
   }
 
   // Take a snapshot of the current received messages.
-  AdapterManager::Observe();
+  AdapterManager::Observe();                //?
 
-  if (AdapterManager::GetGps()->Empty()) {
+  if (AdapterManager::GetGps()->Empty()) {        //gps数据检测。
     AERROR << "GPS message buffer is empty.";
     if (service_started_) {
       buffer.ERROR("GPS message buffer is empty.");
@@ -83,7 +91,7 @@ void RTKLocalization::OnTimer(const ros::TimerEvent &event) {
     return;
   }
   if (AdapterManager::GetImu()->Empty()) {
-    AERROR << "IMU message buffer is empty.";
+    AERROR << "IMU message buffer is empty.";     //imu数据检测。
     if (service_started_) {
       buffer.ERROR("IMU message buffer is empty.");
     }
@@ -91,13 +99,13 @@ void RTKLocalization::OnTimer(const ros::TimerEvent &event) {
   }
 
   // publish localization messages
-  PublishLocalization();
+  PublishLocalization();                //发布定位信息。？？
   service_started_ = true;
 
   // watch dog
-  RunWatchDog();
+  RunWatchDog();                        //？
 
-  last_received_timestamp_sec_ = common::time::ToSecond(Clock::Now());
+  last_received_timestamp_sec_ = common::time::ToSecond(Clock::Now());    //更新数据接受时间。
 }
 
 template <class T>
@@ -227,21 +235,22 @@ void RTKLocalization::InterpolateIMU(const Imu &imu1, const Imu &imu2,
 
 void RTKLocalization::PrepareLocalizationMsg(
     LocalizationEstimate *localization) {
-  const auto &gps_msg = AdapterManager::GetGps()->GetLatestObserved();
+  const auto &gps_msg = AdapterManager::GetGps()->GetLatestObserved();    //获取gps数据
 
   bool imu_valid = true;
-  Imu imu_msg;
+  Imu imu_msg;                                              //获取与gps匹配的imu数据
   if (FLAGS_enable_gps_imu_interprolate) {
     // find the matching gps and imu message
     double gps_time_stamp = gps_msg.header().timestamp_sec();
-    if (!FindMatchingIMU(gps_time_stamp, &imu_msg)) {
+    if (!FindMatchingIMU(gps_time_stamp, &imu_msg)) {       //根据gps数据时间获取对应的imu数据
       imu_valid = false;
     }
   } else {
-    imu_msg = AdapterManager::GetImu()->GetLatestObserved();
+    imu_msg = AdapterManager::GetImu()->GetLatestObserved();  //单独获取imu数据，一般不适用吧。
   }
 
-  if (imu_valid &&
+  //检测imu数据和gps数据是否匹配。
+  if (imu_valid &&                      
       fabs(gps_msg.header().timestamp_sec() - imu_msg.header().timestamp_sec() >
            FLAGS_gps_imu_timestamp_sec_diff_tolerance)) {
     // not the same time stamp, 20ms threshold
@@ -251,7 +260,7 @@ void RTKLocalization::PrepareLocalizationMsg(
            << imu_msg.header().timestamp_sec() << "]";
   }
 
-  ComposeLocalizationMsg(gps_msg, imu_msg, localization);
+  ComposeLocalizationMsg(gps_msg, imu_msg, localization);   //融合gps和imu数据，以计算定位信息。
 }
 
 void RTKLocalization::ComposeLocalizationMsg(
@@ -260,6 +269,7 @@ void RTKLocalization::ComposeLocalizationMsg(
   localization->Clear();
 
   // header
+  //填充localization数据的header结构。
   AdapterManager::FillLocalizationHeader(FLAGS_localization_module_name,
                                          localization);
   if (FLAGS_enable_gps_timestamp) {
@@ -364,11 +374,11 @@ void RTKLocalization::ComposeLocalizationMsg(
 }
 
 void RTKLocalization::PublishLocalization() {
-  LocalizationEstimate localization;
-  PrepareLocalizationMsg(&localization);
+  LocalizationEstimate localization;            //定义要发布的定位信息变量。
+  PrepareLocalizationMsg(&localization);        //?
 
   // publish localization messages
-  AdapterManager::PublishLocalization(localization);
+  AdapterManager::PublishLocalization(localization);    //发布定位信息
   ADEBUG << "[OnTimer]: Localization message publish success!";
 }
 

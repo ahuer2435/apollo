@@ -42,13 +42,19 @@
 namespace apollo {
 namespace common {
 namespace adapter {
-
+/*
+* 使用了设计模式中的adapter mode
+*/
 /// Macro to prepare all the necessary adapter functions when adding a
 /// new input/output. For example when you want to listen to
 /// car_status message for your module, you can do
 /// REGISTER_ADAPTER(CarStatus) write an adapter class called
 /// CarStatusAdapter, and call EnableCarStatus(`car_status_topic`,
 /// true, `callback`(if there's one)) in AdapterManager.
+/*
+* Enable##name大概作用是按照参数创建一个话题的订阅或者发布。
+* instance()->Internalxxx##name的机制，下面有定义，调用name也就是模块自己的func。
+*/
 #define REGISTER_ADAPTER(name)                                                 \
  public:                                                                       \
   static void Enable##name(const std::string &topic_name,                      \

@@ -33,6 +33,9 @@ void AdapterManager::Observe() {
 
 bool AdapterManager::Initialized() { return instance()->initialized_; }
 
+/*
+* 根据conf文件，创建配置AdapterManagerConfig对象，以之为参数调用Init函数。
+*/
 void AdapterManager::Init(const std::string &adapter_config_filename) {
   // Parse config file
   AdapterManagerConfig configs;
@@ -43,6 +46,11 @@ void AdapterManager::Init(const std::string &adapter_config_filename) {
   Init(configs);
 }
 
+/*
+* 创建一个Nodehandler，并通过调用相应的enable函数，创建话题。
+* 根据参数configs，调用相应模块的EnableModule函数，EnableModule函数是在AdapterManager类中定义，
+* 以宏REGISTER_ADAPTER的形式定义。作用是创建相应的topic。
+*/
 void AdapterManager::Init(const AdapterManagerConfig &configs) {
   instance()->initialized_ = true;
   if (configs.is_ros()) {

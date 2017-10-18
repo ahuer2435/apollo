@@ -33,6 +33,10 @@
   classname();                                    \
   DISALLOW_COPY_AND_ASSIGN(classname);
 
+/*
+* 宏定义一个单例类，即只能定义一个单例类，使用类的私有静态指针变量指向类的唯一实例，并用一个公有的静态方法获取该实例。
+* instance()函数返回指向单例类的指针。也属于一种设计模式--单例模式
+*/
 #define DECLARE_SINGLETON(classname)        \
  public:                                    \
   static classname *instance() {            \
