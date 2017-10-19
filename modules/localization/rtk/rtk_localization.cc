@@ -263,15 +263,26 @@ void RTKLocalization::PrepareLocalizationMsg(
   ComposeLocalizationMsg(gps_msg, imu_msg, localization);   //融合gps和imu数据，以计算定位信息。
 }
 
+/*
+* const localization::Gps &gps_msg, const localization::Imu &imu_msg分别对应apollo1.5/modules/localization/proto
+* 目录下的gps.proto和imu.proto文件中的Gps和Imu message生成的类。
+* LocalizationEstimate类型对应apollo1.5/modules/localization/proto目录下localization.proto文件中的LocalizationEstimate message生成的类。
+* localization指向一个LocalizationEstimate结构。
+*/
+/*
+* 分别使用gps和imu数据直接设置localization，线加速度是两个传感器融合后的值，其他信息，包括pose都是只用单个传感器设置的，
+* 并没有融合过程。
+*/
 void RTKLocalization::ComposeLocalizationMsg(
     const localization::Gps &gps_msg, const localization::Imu &imu_msg,
     LocalizationEstimate *localization) {
-  localization->Clear();
+    localization->Clear();
 
   // header
   //填充localization数据的header结构。
   AdapterManager::FillLocalizationHeader(FLAGS_localization_module_name,
                                          localization);
+  //设置localization中的header结构。
   if (FLAGS_enable_gps_timestamp) {
     // copy time stamp, do NOT use Clock::Now()
     localization->mutable_header()->set_timestamp_sec(
@@ -279,13 +290,15 @@ void RTKLocalization::ComposeLocalizationMsg(
   }
 
   // combine gps and imu
+  //mutable_pose指向localization结构中的pose结构。
   auto mutable_pose = localization->mutable_pose();
   if (gps_msg.has_localization()) {
-    const auto &pose = gps_msg.localization();
+    const auto &pose = gps_msg.localization();      //pose指向gps_msg中的localization结构。
 
     if (pose.has_position()) {
       // position
       // world frame -> map frame
+      //使用gps定位信息，设置mutable_pose中的position
       mutable_pose->mutable_position()->set_x(pose.position().x() -
                                               map_offset_[0]);
       mutable_pose->mutable_position()->set_y(pose.position().y() -
@@ -295,6 +308,7 @@ void RTKLocalization::ComposeLocalizationMsg(
     }
 
     // orientation
+    //使用gps位姿信息设置mutable_pose中的position
     if (pose.has_orientation()) {
       mutable_pose->mutable_orientation()->CopyFrom(pose.orientation());
       double heading = common::math::QuaternionToHeading(
@@ -303,13 +317,14 @@ void RTKLocalization::ComposeLocalizationMsg(
       mutable_pose->set_heading(heading);
     }
     // linear velocity
+    //使用gps线速度信息设置mutable_pose中的position
     if (pose.has_linear_velocity()) {
       mutable_pose->mutable_linear_velocity()->CopyFrom(pose.linear_velocity());
     }
   }
 
   if (imu_msg.has_imu()) {
-    const auto &imu = imu_msg.imu();
+    const auto &imu = imu_msg.imu();    //这里的imu其类型还是pose，即imu测得的位置信息。
     // linear acceleration
     if (imu.has_linear_acceleration()) {
       if (FLAGS_enable_map_reference_unify) {
@@ -320,12 +335,13 @@ void RTKLocalization::ComposeLocalizationMsg(
                         imu.linear_acceleration().y(),
                         imu.linear_acceleration().z());
           Vector3d vec = common::math::QuaternionRotate(
-              localization->pose().orientation(), orig);
-          mutable_pose->mutable_linear_acceleration()->set_x(vec[0]);
+              localization->pose().orientation(), orig);  //利用imu测得的线加速度，更新localization的位姿。
+          mutable_pose->mutable_linear_acceleration()->set_x(vec[0]);   //利用imu测得的线加速度，设置localization。
           mutable_pose->mutable_linear_acceleration()->set_y(vec[1]);
           mutable_pose->mutable_linear_acceleration()->set_z(vec[2]);
 
           // linear_acceleration_vfr
+          //利用imu测得的线加速度参考，设置localization。
           mutable_pose->mutable_linear_acceleration_vrf()->CopyFrom(
               imu.linear_acceleration());
 
@@ -340,6 +356,7 @@ void RTKLocalization::ComposeLocalizationMsg(
     }
 
     // angular velocity
+    //利用imu的angular_velocity设置mutable_pose
     if (imu.has_angular_velocity()) {
       if (FLAGS_enable_map_reference_unify) {
         if (localization->pose().has_orientation()) {
@@ -367,6 +384,7 @@ void RTKLocalization::ComposeLocalizationMsg(
     }
 
     // euler angle
+    // 利用imu的euler_angles 设置mutable_pose
     if (imu.has_euler_angles()) {
       mutable_pose->mutable_euler_angles()->CopyFrom(imu.euler_angles());
     }
