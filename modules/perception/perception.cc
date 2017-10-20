@@ -42,20 +42,24 @@ Status Perception::Init() {
   }
 
   CHECK(AdapterManager::GetPointCloud()) << "PointCloud is not initialized.";
+  //注册回调函数OnPointCloud
   AdapterManager::AddPointCloudCallback(&Perception::OnPointCloud, this);
   return Status::OK();
 }
 
+/*
+* 收到点云数据，也就是激光雷达的数据执行此函数。
+*/
 void Perception::OnPointCloud(const sensor_msgs::PointCloud2& message) {
   ADEBUG << "get point cloud callback";
 
   if (lidar_process_ != nullptr && lidar_process_->IsInit()) {
-    lidar_process_->Process(message);
+    lidar_process_->Process(message);       //处理激光雷达数据
 
     /// public obstacle message
     PerceptionObstacles obstacles;
-    if (lidar_process_->GeneratePbMsg(&obstacles)) {
-      AdapterManager::PublishPerceptionObstacles(obstacles);
+    if (lidar_process_->GeneratePbMsg(&obstacles)) {            //生成障碍物数据
+      AdapterManager::PublishPerceptionObstacles(obstacles);    //发布障碍物数据
     }
   }
 }

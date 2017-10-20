@@ -82,7 +82,7 @@ bool LidarProcess::Process(const sensor_msgs::PointCloud2& message) {
   PERF_BLOCK_START();
   /// get velodyne2world transfrom
   std::shared_ptr<Matrix4d> velodyne_trans = std::make_shared<Matrix4d>();
-  if (!GetVelodyneTrans(kTimeStamp, velodyne_trans.get())) {
+  if (!GetVelodyneTrans(kTimeStamp, velodyne_trans.get())) {                //获取velodyne2world坐标系转化关系
     AERROR << "failed to get trans at timestamp: " << kTimeStamp;
     error_code_ = common::PERCEPTION_ERROR_TF;
     return false;
@@ -91,7 +91,7 @@ bool LidarProcess::Process(const sensor_msgs::PointCloud2& message) {
   PERF_BLOCK_END("lidar_get_velodyne2world_transfrom");
 
   PointCloudPtr point_cloud(new PointCloud);
-  TransPointCloudToPCL(message, &point_cloud);
+  TransPointCloudToPCL(message, &point_cloud);               //由Lidar数据生成PCL，存入point_cloud
   ADEBUG << "transform pointcloud success. points num is: "
          << point_cloud->points.size();
   PERF_BLOCK_END("lidar_transform_poindcloud");
@@ -104,6 +104,10 @@ bool LidarProcess::Process(const sensor_msgs::PointCloud2& message) {
   return true;
 }
 
+/*
+* timestamp时间戳，point_cloud：PCL数据，velodyne_trans：tf（velodyne2world）。
+* 不太明白这个Process作用，似乎没有修改point_cloud
+*/
 bool LidarProcess::Process(const double timestamp, PointCloudPtr point_cloud,
                            std::shared_ptr<Matrix4d> velodyne_trans) {
   PERF_BLOCK_START();
@@ -317,6 +321,10 @@ void LidarProcess::TransPointCloudToPCL(const sensor_msgs::PointCloud2& in_msg,
   cloud->points.resize(points_num);
 }
 
+/*
+* 输入：query_time，查询的时间戳。
+* 输出：Velodyne坐标系与XXX的转化关系
+*/
 bool LidarProcess::GetVelodyneTrans(const double query_time, Matrix4d* trans) {
   if (!trans) {
     AERROR << "failed to get trans, the trans ptr can not be NULL";
