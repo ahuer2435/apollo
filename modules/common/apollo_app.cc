@@ -65,7 +65,7 @@ void apollo_app_sigint_handler(int signal_num) {
   if (signal_num != SIGINT) {
     return;
   }
-  bool static is_stopping = false;
+  bool static is_stopping = false;     //此变量应该针对的是重复收到多次SIGINT，只影响一次。 
   if (is_stopping) {
     return;
   }
