@@ -33,14 +33,17 @@ using apollo::common::ErrorCode;
 std::string Perception::Name() const { return "perception"; }
 
 Status Perception::Init() {
+  //读取配置文件，创建node handle和topic，参考文档：adapter设计架构源码分析。
   AdapterManager::Init(FLAGS_adapter_config_filename);
 
+  //启动激光雷达进程
   lidar_process_.reset(new LidarProcess());
   if (lidar_process_ != nullptr && !lidar_process_->Init()) {
     AERROR << "failed to init lidar_process.";
     return Status(ErrorCode::PERCEPTION_ERROR, "failed to init lidar_process.");
   }
 
+  //检测是否获取到点云数据（from激光雷达）
   CHECK(AdapterManager::GetPointCloud()) << "PointCloud is not initialized.";
   //注册回调函数OnPointCloud
   AdapterManager::AddPointCloudCallback(&Perception::OnPointCloud, this);
