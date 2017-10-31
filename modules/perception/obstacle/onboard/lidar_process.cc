@@ -195,8 +195,12 @@ bool LidarProcess::Process(const double timestamp, PointCloudPtr point_cloud,
   return true;
 }
 
+/*
+* 注册HdmapROIFilter，CNNSegmentation，MinBoxObjectBuilder，HmObjectTracker。
+* 定义在lidar/dummy目录下,例如REGISTER_GROUNDDETECTOR--->REGISTER_GROUNDDETECTOR--->REGISTER_CLASS--->ObjectFactory##name
+*/
 void LidarProcess::RegistAllAlgorithm() {
-  RegisterFactoryDummyROIFilter();
+  RegisterFactoryDummyROIFilter();              
   RegisterFactoryDummySegmentation();
   RegisterFactoryDummyObjectBuilder();
   RegisterFactoryDummyTracker();
@@ -207,6 +211,9 @@ void LidarProcess::RegistAllAlgorithm() {
   RegisterFactoryHmObjectTracker();
 }
 
+/*
+* 是hd map相关配置
+*/
 bool LidarProcess::InitFrameDependence() {
   /// init config manager
   ConfigManager* config_manager = ConfigManager::instance();
@@ -234,6 +241,9 @@ bool LidarProcess::InitFrameDependence() {
   return true;
 }
 
+/*
+* roi_filter_,segmentor_,object_builder_,tracker_实例化，并调用其init()方法。
+*/
 bool LidarProcess::InitAlgorithmPlugin() {
   /// init roi filter
   roi_filter_.reset(
@@ -363,7 +373,9 @@ bool LidarProcess::GetVelodyneTrans(const double query_time, Matrix4d* trans) {
          << FLAGS_lidar_tf2_child_frame_id << " trans: " << *trans;
   return true;
 }
-
+/*
+* 根据objects_ vector生成障碍物消息
+*/
 bool LidarProcess::GeneratePbMsg(PerceptionObstacles* obstacles) {
   AdapterManager::FillPerceptionObstaclesHeader(FLAGS_obstacle_module_name,
                                                 obstacles);

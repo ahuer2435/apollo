@@ -53,7 +53,7 @@ namespace adapter {
 /// true, `callback`(if there's one)) in AdapterManager.
 /*
 * Enable##name大概作用是按照参数创建一个话题的订阅或者发布。
-* instance()->Internalxxx##name的机制，下面有定义，调用name也就是模块自己的func。
+* instance()->Internalxxx##name的机制，下面有定义，调用name也就是模块自己的func。但是一直没有找到其实现，例如name##_.get()
 */
 #define REGISTER_ADAPTER(name)                                                 \
  public:                                                                       \

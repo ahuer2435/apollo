@@ -88,6 +88,9 @@ class BaseTracker {
   // @param [in]: timestamp.
   // @param [in]: options.
   // @param [out]: current tracked objects.
+  /*
+  * 跟踪障碍物，objects输入障碍物信息，tracked_objects输出障碍物信息
+  */
   virtual bool Track(const std::vector<ObjectPtr> &objects, double timestamp,
                      const TrackerOptions &options,
                      std::vector<ObjectPtr> *tracked_objects) = 0;

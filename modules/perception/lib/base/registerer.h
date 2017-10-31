@@ -180,6 +180,7 @@ bool GetRegisteredClasses(
     }                                                                          \
   };
 
+//未明白Any的作用。
 #define REGISTER_CLASS(clazz, name)                                            \
   class ObjectFactory##name : public apollo::perception::ObjectFactory {       \
    public:                                                                     \

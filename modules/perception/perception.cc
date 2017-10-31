@@ -30,6 +30,7 @@ using apollo::common::adapter::AdapterManager;
 using apollo::common::Status;
 using apollo::common::ErrorCode;
 
+//ros node name
 std::string Perception::Name() const { return "perception"; }
 
 Status Perception::Init() {
@@ -37,8 +38,8 @@ Status Perception::Init() {
   AdapterManager::Init(FLAGS_adapter_config_filename);
 
   //启动激光雷达进程
-  lidar_process_.reset(new LidarProcess());
-  if (lidar_process_ != nullptr && !lidar_process_->Init()) {
+  lidar_process_.reset(new LidarProcess());     //reset()函数是智能指针unique_ptr的属性，通过此使得指针指向对象LidarProcess的实例。
+  if (lidar_process_ != nullptr && !lidar_process_->Init()) {     //lidar_process_->Init配置对雷达数据处理的算法
     AERROR << "failed to init lidar_process.";
     return Status(ErrorCode::PERCEPTION_ERROR, "failed to init lidar_process.");
   }
@@ -57,7 +58,7 @@ void Perception::OnPointCloud(const sensor_msgs::PointCloud2& message) {
   ADEBUG << "get point cloud callback";
 
   if (lidar_process_ != nullptr && lidar_process_->IsInit()) {
-    lidar_process_->Process(message);       //处理激光雷达数据
+    lidar_process_->Process(message);       //处理激光雷达数据，使用roi_filter，segmentor，object builder，tracker算法处理激光雷达数据。
 
     /// public obstacle message
     PerceptionObstacles obstacles;
