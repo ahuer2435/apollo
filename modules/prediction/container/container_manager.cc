@@ -33,6 +33,7 @@ void ContainerManager::Init(const AdapterManagerConfig& config) {
   RegisterContainers();
 }
 
+//adapter.conf文件中的话题类型是接受话题，就用对应的type注册一个容器。
 void ContainerManager::RegisterContainers() {
   for (const auto& adapter_config : config_.config()) {
     if (adapter_config.has_type() &&
@@ -52,6 +53,7 @@ Container* ContainerManager::GetContainer(
   }
 }
 
+//容器类型：ObstaclesContainer和PoseContainer 类。
 std::unique_ptr<Container> ContainerManager::CreateContainer(
     const common::adapter::AdapterConfig::MessageType& type) {
   std::unique_ptr<Container> container_ptr(nullptr);
@@ -63,6 +65,7 @@ std::unique_ptr<Container> ContainerManager::CreateContainer(
   return container_ptr;
 }
 
+//注册容器，在这里就是增加containers_[]数组中的一项。
 void ContainerManager::RegisterContainer(
     const common::adapter::AdapterConfig::MessageType& type) {
   containers_[type] = CreateContainer(type);

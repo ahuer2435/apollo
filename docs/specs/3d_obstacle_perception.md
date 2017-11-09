@@ -129,8 +129,8 @@ The Apollo CNN segmentation consists of four successive steps:
 
 The following sections describe the deep CNN in detail.
 
-### Channel Feature Extraction
-
+### Channel Feature Extraction     
+###由点构成cells，且每个cell都以Lidar为坐标系， 计算其中的点
 Given a frame of point cloud, Apollo build a birds-eye view (i.e.,
 projected to the X-Y plane) 2D grid in the local coordinate system. Each
 point within a predefined range with respect to the origin (i.e., the

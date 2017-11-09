@@ -38,11 +38,15 @@ using apollo::common::adapter::AdapterConfig;
 using apollo::common::Status;
 using apollo::common::ErrorCode;
 
+//FLAGS_prediction_xxxx宏在prediction/common/prediction_gflag.c中定义
 std::string Prediction::Name() const { return FLAGS_prediction_module_name; }
 
+//定义好节点与话题。
 Status Prediction::Init() {
   // Load prediction conf
   prediction_conf_.Clear();
+  //FLAGS_prediction_conf_file宏为："modules/prediction/conf/prediction_conf.pb.txt"
+  //其中规定的是preditor的产生的通道类型
   if (!common::util::GetProtoFromFile(FLAGS_prediction_conf_file,
                                       &prediction_conf_)) {
     return OnError("Unable to load prediction conf file: " +
@@ -52,6 +56,8 @@ Status Prediction::Init() {
            << prediction_conf_.ShortDebugString();
   }
 
+  //FLAGS_adapter_config_filename宏为：modules/prediction/conf/adapter.conf
+  //加载prediction adapter，设置定义话题。
   adapter_conf_.Clear();
   if (!common::util::GetProtoFromFile(FLAGS_adapter_config_filename,
                                       &adapter_conf_)) {
@@ -71,9 +77,11 @@ Status Prediction::Init() {
   CHECK(AdapterManager::GetLocalization()) << "Localization is not ready.";
   CHECK(AdapterManager::GetPerceptionObstacles()) << "Perception is not ready.";
 
+  //设置perception obstacle 回调函数为OnPerception
   // Set perception obstacle callback function
   AdapterManager::AddPerceptionObstaclesCallback(&Prediction::OnPerception,
                                                  this);
+  //设置localization 回调函数为OnLocalization
   // Set localization callback function
   AdapterManager::AddLocalizationCallback(&Prediction::OnLocalization, this);
 
@@ -85,19 +93,24 @@ Status Prediction::Start() { return Status::OK(); }
 void Prediction::Stop() {}
 
 void Prediction::OnLocalization(const LocalizationEstimate& localization) {
+  //获取障碍物容器
   ObstaclesContainer* obstacles_container = dynamic_cast<ObstaclesContainer*>(
       ContainerManager::instance()->GetContainer(
           AdapterConfig::PERCEPTION_OBSTACLES));
   CHECK_NOTNULL(obstacles_container);
 
+  //获取位置容器
   PoseContainer* pose_container = dynamic_cast<PoseContainer*>(
       ContainerManager::instance()->GetContainer(AdapterConfig::LOCALIZATION));
   CHECK_NOTNULL(pose_container);
 
-  pose_container->Insert(localization);
-  PerceptionObstacle* pose_ptr = pose_container->ToPerceptionObstacle();
+
+  pose_container->Insert(localization);     //将定位信息插入位置容器。
+
+  //将位置信息融合到障碍物容器中。
+  PerceptionObstacle* pose_ptr = pose_container->ToPerceptionObstacle();    //重点pose_container->ToPerceptionObstacle()函数。暂放。
   if (pose_ptr != nullptr) {
-    obstacles_container->InsertPerceptionObstacle(
+    obstacles_container->InsertPerceptionObstacle(                          //重点obstacles_container->InsertPerceptionObstacle函数，暂放。
         *(pose_ptr), pose_container->GetTimestamp());
   } else {
     ADEBUG << "Invalid pose found.";
@@ -108,14 +121,18 @@ void Prediction::OnLocalization(const LocalizationEstimate& localization) {
 }
 
 void Prediction::OnPerception(const PerceptionObstacles& perception_obstacles) {
+  //获取障碍物容器。
   ObstaclesContainer* obstacles_container = dynamic_cast<ObstaclesContainer*>(
       ContainerManager::instance()->GetContainer(
           AdapterConfig::PERCEPTION_OBSTACLES));
   CHECK_NOTNULL(obstacles_container);
+  //将障碍物信息加入到障碍物容器。
   obstacles_container->Insert(perception_obstacles);
-  EvaluatorManager::instance()->Run(perception_obstacles);
-  PredictorManager::instance()->Run(perception_obstacles);
 
+  EvaluatorManager::instance()->Run(perception_obstacles);  //运行评估器。
+  PredictorManager::instance()->Run(perception_obstacles);  //运行预测器。
+
+  //填充发布消息内容，感觉应该用一个新的变量，而不是直接修改形参prediction_obstacles。
   auto prediction_obstacles =
       PredictorManager::instance()->prediction_obstacles();
   AdapterManager::FillPredictionHeader(Name(), &prediction_obstacles);
