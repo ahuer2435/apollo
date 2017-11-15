@@ -69,7 +69,7 @@ Status Prediction::Init() {
   }
 
   // Initialization of all managers
-  AdapterManager::instance()->Init(adapter_conf_);
+  AdapterManager::instance()->Init(adapter_conf_);      //定义nodehandle和话题。
   ContainerManager::instance()->Init(adapter_conf_);
   EvaluatorManager::instance()->Init(prediction_conf_);
   PredictorManager::instance()->Init(prediction_conf_);
