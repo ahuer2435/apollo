@@ -36,18 +36,21 @@ void LaneSequencePredictor::Predict(Obstacle* obstacle) {
   CHECK_NOTNULL(obstacle);
   CHECK_GT(obstacle->history_size(), 0);
 
+//根据障碍物信息获取feature
   const Feature& feature = obstacle->latest_feature();
   if (!feature.has_lane() || !feature.lane().has_lane_graph()) {
     AERROR << "Obstacle [" << obstacle->id() << " has no lane graph.";
     return;
   }
 
+//由feature获取num_lane_sequence
   std::string lane_id = feature.lane().lane_feature().lane_id();
   int num_lane_sequence = feature.lane().lane_graph().lane_sequence_size();
   std::vector<bool> enable_lane_sequence(num_lane_sequence, true);
   FilterLaneSequences(feature.lane().lane_graph(), lane_id,
                       &enable_lane_sequence);
-
+  
+//遍历num_lane_sequence，通过feature获取sequence
   for (int i = 0; i < num_lane_sequence; ++i) {
     const LaneSequence& sequence = feature.lane().lane_graph().lane_sequence(i);
     if (sequence.lane_segment_size() <= 0) {
@@ -65,7 +68,10 @@ void LaneSequencePredictor::Predict(Obstacle* obstacle) {
     ADEBUG << "Obstacle [" << obstacle->id()
            << "] will draw a lane sequence trajectory [" << ToString(sequence)
            << "] with probability [" << sequence.probability() << "].";
-
+//由sequence获取curr_lane_id
+//由curr_lane_id通过DrawLaneSequenceTrajectoryPoints()函数获取TrajectoryPoint。
+//由TrajectoryPoint通过GenerateTrajectory()函数获取trajectory
+//设置该trajectory的probability，存入trajectories_向量
     std::string curr_lane_id = sequence.lane_segment(0).lane_id();
     std::vector<TrajectoryPoint> points;
     DrawLaneSequenceTrajectoryPoints(obstacle->kf_lane_tracker(curr_lane_id),

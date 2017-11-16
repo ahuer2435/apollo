@@ -85,18 +85,20 @@ Predictor* PredictorManager::GetPredictor(
 
 void PredictorManager::Run(const PerceptionObstacles& perception_obstacles) {
   prediction_obstacles_.Clear();
+  //获取障碍物容器container
   ObstaclesContainer* container = dynamic_cast<ObstaclesContainer*>(
       ContainerManager::instance()->GetContainer(
           AdapterConfig::PERCEPTION_OBSTACLES));
   CHECK_NOTNULL(container);
 
   Predictor* predictor = nullptr;
-  for (const auto& perception_obstacle :
-       perception_obstacles.perception_obstacle()) {
+  for (const auto& perception_obstacle : perception_obstacles.perception_obstacle()) {
     PredictionObstacle prediction_obstacle;
-    prediction_obstacle.set_timestamp(perception_obstacle.timestamp());
+    prediction_obstacle.set_timestamp(perception_obstacle.timestamp());		//设置预测障碍物的时间戳
     int id = perception_obstacle.id();
-    Obstacle* obstacle = container->GetObstacle(id);
+    Obstacle* obstacle = container->GetObstacle(id);						//根据预测障碍物中的id获取障碍物信息obstacle
+
+	//根据预测障碍物中的类型设置预测器的类型predictor。
     if (obstacle != nullptr) {
       switch (perception_obstacle.type()) {
         case PerceptionObstacle::VEHICLE: {
@@ -122,12 +124,12 @@ void PredictorManager::Run(const PerceptionObstacles& perception_obstacles) {
       }
 
       if (predictor != nullptr) {
-        predictor->Predict(obstacle);
+        predictor->Predict(obstacle);	//传入障碍物信息，执行预测器。
         for (const auto& trajectory : predictor->trajectories()) {
-          prediction_obstacle.add_trajectory()->CopyFrom(trajectory);
+          prediction_obstacle.add_trajectory()->CopyFrom(trajectory);		//将障碍物的所有轨道配置到预测到的障碍物中。
         }
       }
-      prediction_obstacle.set_timestamp(obstacle->timestamp());
+      prediction_obstacle.set_timestamp(obstacle->timestamp());				//更新时间戳。
     }
 
     prediction_obstacle.set_predicted_period(FLAGS_prediction_duration);

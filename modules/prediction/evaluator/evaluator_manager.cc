@@ -65,44 +65,55 @@ Evaluator* EvaluatorManager::GetEvaluator(
   return it != evaluators_.end() ? it->second.get() : nullptr;
 }
 
+
 void EvaluatorManager::Run(
     const perception::PerceptionObstacles& perception_obstacles) {
+    //获取障碍物容器container
   ObstaclesContainer* container = dynamic_cast<ObstaclesContainer*>(
       ContainerManager::instance()->GetContainer(
           AdapterConfig::PERCEPTION_OBSTACLES));
   CHECK_NOTNULL(container);
 
   Evaluator* evaluator = nullptr;
-  for (const auto& perception_obstacle :
-       perception_obstacles.perception_obstacle()) {
-    int id = perception_obstacle.id();
-    Obstacle* obstacle = container->GetObstacle(id);
+ //遍历所有障碍物
+  for (const auto& perception_obstacle :perception_obstacles.perception_obstacle()) {
+    int id = perception_obstacle.id();	//获取障碍物id
+    Obstacle* obstacle = container->GetObstacle(id);	//利用障碍物id和障碍物容器获取障碍物信息obstacle。
 
     if (obstacle == nullptr) {
       continue;
     }
 
-    switch (perception_obstacle.type()) {
-      case PerceptionObstacle::VEHICLE: {
-        if (obstacle->IsOnLane()) {
+	//只评估在lane上的障碍物
+	//获取evaluator
+    switch (perception_obstacle.type()) 
+	{
+      case PerceptionObstacle::VEHICLE: 
+	  {
+        if (obstacle->IsOnLane()) 
+		{
           evaluator = GetEvaluator(vehicle_on_lane_evaluator_);
           CHECK_NOTNULL(evaluator);
         }
         break;
       }
-      default: {
-        if (obstacle->IsOnLane()) {
+      default: 
+      {
+        if (obstacle->IsOnLane()) 
+		{
           evaluator = GetEvaluator(vehicle_on_lane_evaluator_);
           CHECK_NOTNULL(evaluator);
         }
         break;
       }
-    }
-    if (evaluator != nullptr) {
+    }//end switch
+    //调用Evaluator
+    if (evaluator != nullptr) 
+	{
       evaluator->Evaluate(obstacle);
     }
-  }
-}
+  }//end for
+}//end run
 
 std::unique_ptr<Evaluator> EvaluatorManager::CreateEvaluator(
     const ObstacleConf::EvaluatorType& type) {

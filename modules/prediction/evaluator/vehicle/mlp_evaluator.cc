@@ -60,6 +60,8 @@ void MLPEvaluator::Evaluate(Obstacle* obstacle_ptr) {
     return;
   }
 
+//两个重要结构：Feature和LaneGraph
+//obstacle_ptr包含Feature，Feature包含LaneGraph
   Feature* latest_feature_ptr = obstacle_ptr->mutable_latest_feature();
   CHECK_NOTNULL(latest_feature_ptr);
   if (!latest_feature_ptr->has_lane() ||
@@ -75,7 +77,10 @@ void MLPEvaluator::Evaluate(Obstacle* obstacle_ptr) {
     AERROR << "Obstacle [" << id << "] has no lane sequences.";
     return;
   }
-
+//每个obstacle_ptr中包含多个lane_graph_ptr
+//利用obstacle_ptr和lane_graph_ptr可计算出feature_values
+//由feature_values计算概率值probability。
+//将概率值probability设置到lane_sequence_ptr。
   for (int i = 0; i < lane_graph_ptr->lane_sequence_size(); ++i) {
     LaneSequence* lane_sequence_ptr = lane_graph_ptr->mutable_lane_sequence(i);
     CHECK(lane_sequence_ptr != nullptr);
