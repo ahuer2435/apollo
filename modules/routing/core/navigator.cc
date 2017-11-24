@@ -98,6 +98,10 @@ void PrintDebugData(const std::vector<NodeWithRange>& nodes) {
 
 }  // namespace
 
+//导航器预配置，输入拓扑图路径，用之设置graph。
+//创建graph_
+//创建black_list_generator_
+//创建result_generator_
 Navigator::Navigator(const std::string& topo_file_path) {
   Graph graph;
   if (!common::util::GetProtoFromFile(topo_file_path, &graph)) {
@@ -127,6 +131,7 @@ bool Navigator::Init(const RoutingRequest& request, const TopoGraph* graph,
                      std::vector<const TopoNode*>* const way_nodes,
                      std::vector<double>* const way_s) {
   Clear();
+  //将请求节点转化为graph_的元素，并保存在way_nodes和 way_s，点的不同性质。
   if (!GetWayNodes(request, graph_.get(), way_nodes, way_s)) {
     AERROR << "Failed to find search terminal point in graph!";
     return false;
@@ -155,6 +160,7 @@ bool Navigator::MergeRoute(
   return true;
 }
 
+//使用A star算法寻找路由。
 bool Navigator::SearchRouteByStrategy(
     const TopoGraph* graph, const std::vector<const TopoNode*>& way_nodes,
     const std::vector<double>& way_s,
@@ -209,13 +215,14 @@ bool Navigator::SearchRouteByStrategy(
 
 bool Navigator::SearchRoute(const RoutingRequest& request,
                             RoutingResponse* const response) {
+  //显示请求命令的信息
   if (!ShowRequestInfo(request, graph_.get())) {
     SetErrorCode(ErrorCode::ROUTING_ERROR_REQUEST,
                  "Error encountered when reading request point!",
                  response->mutable_status());
     return false;
   }
-
+  //检查导航器是否ready。构造函数时打开。
   if (!IsReady()) {
     SetErrorCode(ErrorCode::ROUTING_ERROR_NOT_READY, "Navigator is not ready!",
                  response->mutable_status());
@@ -223,12 +230,14 @@ bool Navigator::SearchRoute(const RoutingRequest& request,
   }
   std::vector<const TopoNode*> way_nodes;
   std::vector<double> way_s;
+  //通过初始化函数，将请求中的点转化为graph中的格式，并存储在way_nodes和way_s.
   if (!Init(request, graph_.get(), &way_nodes, &way_s)) {
     SetErrorCode(ErrorCode::ROUTING_ERROR_NOT_READY,
                  "Failed to initialize navigator!", response->mutable_status());
     return false;
   }
 
+  //通过a star 算法由 way_nodes和 way_s计算出路由点result_nodes
   std::vector<NodeWithRange> result_nodes;
   if (!SearchRouteByStrategy(graph_.get(), way_nodes, way_s, &result_nodes)) {
     SetErrorCode(ErrorCode::ROUTING_ERROR_RESPONSE,
@@ -238,7 +247,7 @@ bool Navigator::SearchRoute(const RoutingRequest& request,
   }
   result_nodes.front().SetStartS(request.waypoint().begin()->s());
   result_nodes.back().SetEndS(request.waypoint().rbegin()->s());
-
+  //将路由点result_nodes合并到response结构
   if (!result_generator_->GeneratePassageRegion(
           graph_->MapVersion(), request, result_nodes, topo_range_manager_,
           response)) {

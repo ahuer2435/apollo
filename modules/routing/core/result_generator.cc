@@ -374,6 +374,7 @@ void PrintDebugInfo(const std::string& road_id,
 
 }  // namespace
 
+//调用是这个
 bool ResultGenerator::GeneratePassageRegion(
     const std::string& map_version, const RoutingRequest& request,
     const std::vector<NodeWithRange>& nodes,

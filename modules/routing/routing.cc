@@ -28,25 +28,33 @@ using apollo::common::adapter::AdapterManager;
 using apollo::common::monitor::MonitorMessageItem;
 using apollo::common::ErrorCode;
 
+//设置节点名字
 std::string Routing::Name() const { return FLAGS_node_name; }
 
+//构造函数初始化monitor_
 Routing::Routing()
     : monitor_(apollo::common::monitor::MonitorMessageItem::ROUTING) {}
 
 apollo::common::Status Routing::Init() {
+  //获取路由地图文件,是一种拓扑图
   const auto routing_map_file = apollo::hdmap::RoutingMapFile();
   AINFO << "Use routing topology graph path: " << routing_map_file;
+  //创建Navigator导航器
   navigator_ptr_.reset(new Navigator(routing_map_file));
+  //读取导航配置文件：modules/routing/conf/routing.pb.txt到routing_conf_。
   CHECK(common::util::GetProtoFromFile(FLAGS_routing_conf_file, &routing_conf_))
       << "Unable to load routing conf file: " + FLAGS_routing_conf_file;
 
   AINFO << "Conf file: " << FLAGS_routing_conf_file << " is loaded.";
 
+  //根据Adapter配置文件：modules/routing/conf/adapter.conf，创建nodehandle和响应topics
   AdapterManager::Init(FLAGS_adapter_config_filename);
+  //设置路由请求话题的回调函数。
   AdapterManager::AddRoutingRequestCallback(&Routing::OnRouting_Request, this);
   return apollo::common::Status::OK();
 }
 
+//返回导航器navigator_ptr_是否ready，并设置monitor的buffer。
 apollo::common::Status Routing::Start() {
   if (!navigator_ptr_->IsReady()) {
     AERROR << "Navigator is not ready!";
@@ -65,6 +73,7 @@ void Routing::OnRouting_Request(
   AINFO << "Get new routing request!!!";
   routing::RoutingResponse routing_response;
   apollo::common::monitor::MonitorBuffer buffer(&monitor_);
+  //根据routing_request，寻找路由，并设置routing_response
   if (!navigator_ptr_->SearchRoute(routing_request, &routing_response)) {
     AERROR << "Failed to search route with navigator.";
 
@@ -72,6 +81,7 @@ void Routing::OnRouting_Request(
     return;
   }
   buffer.INFO("Routing success!");
+  //发布routing_response，反馈路由状况。
   AdapterManager::PublishRoutingResponse(routing_response);
   return;
 }

@@ -18,4 +18,5 @@
 #include "modules/routing/common/routing_gflags.h"
 #include "modules/routing/routing.h"
 
+//创建节点
 APOLLO_MAIN(apollo::routing::Routing);
