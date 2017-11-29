@@ -72,12 +72,18 @@ void EMPlanner::RegisterTasks() {
 
 Status EMPlanner::Init(const PlanningConfig& config) {
   AINFO << "In EMPlanner::Init()";
+  //注册任务。
+  //在任务工厂中注册不同的任务，这些任务是规划器的核心算法所在。
   RegisterTasks();
+  //创建每个任务的实例对象，并保存进tasks_结构中。
   for (const auto task : config.em_planner_config().task()) {
     tasks_.emplace_back(
         task_factory_.CreateObject(static_cast<TaskType>(task)));
     AINFO << "Created task:" << tasks_.back()->Name();
   }
+
+  //分别调用每个任务实例的Init函数，并使用配置文件modules/planning/conf/planning_config.pb.txt配置任务。
+  //不同的任务表示不同的处理方式，共6中：交通决策器，道路优化器，道路决策器，速度优化器，速度决策器，平滑优化器。
   for (auto& task : tasks_) {
     if (!task->Init(config)) {
       std::string msg(
@@ -123,6 +129,7 @@ Status EMPlanner::Plan(const TrajectoryPoint& planning_start_point,
   auto ret = Status::OK();
   for (auto& optimizer : tasks_) {
     const double start_timestamp = Clock::NowInSecond();
+    //
     ret = optimizer->Execute(frame, reference_line_info);
     if (!ret.ok()) {
       AERROR << "Failed to run tasks[" << optimizer->Name()

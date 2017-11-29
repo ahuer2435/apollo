@@ -87,10 +87,12 @@ const routing::RoutingResponse &Frame::routing_response() const {
   return routing_response_;
 }
 
+//再启动plan之前会遍历reference_line_info_，每一个reference_line_info_都会规划一次。
 std::list<ReferenceLineInfo> &Frame::reference_line_info() {
   return reference_line_info_;
 }
 
+//通过reference_lines设置reference_line_info_
 bool Frame::InitReferenceLineInfo(
     const std::vector<ReferenceLine> &reference_lines) {
   reference_line_info_.clear();
@@ -166,6 +168,7 @@ Status Frame::Init(const PlanningConfig &config,
   smoother_config_ = config.reference_line_smoother_config();
 
   std::vector<ReferenceLine> reference_lines;
+  //有两类方法获取reference_lines，一类是来源于ReferenceLineProvider，另一类来源有routing。
   if (FLAGS_enable_reference_line_provider_thread) {
     reference_lines = ReferenceLineProvider::instance()->GetReferenceLines();
   } else {

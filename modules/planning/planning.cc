@@ -41,6 +41,7 @@ using apollo::common::VehicleState;
 using apollo::common::adapter::AdapterManager;
 using apollo::common::time::Clock;
 
+//规划器节点名字。
 std::string Planning::Name() const { return "planning"; }
 
 void Planning::RegisterPlanners() {
@@ -50,16 +51,21 @@ void Planning::RegisterPlanners() {
                             []() -> Planner* { return new EMPlanner(); });
 }
 
+//这里的frame是否相当于局部地图
 Status Planning::InitFrame(const uint32_t sequence_num, const double timestamp,
                            const TrajectoryPoint& init_adc_point) {
+  //创建frame，使用sequence_num作为参数。
   frame_.reset(new Frame(sequence_num));
+  //设置规划的起始点
   frame_->SetPlanningStartPoint(init_adc_point);
 
   if (AdapterManager::GetRoutingResponse()->Empty()) {
     AERROR << "Routing is empty";
     return Status(ErrorCode::PLANNING_ERROR, "routing is empty");
   }
+  //设置车辆的初始位置。
   frame_->SetVehicleInitPose(VehicleState::instance()->pose());
+  //设置路由线路
   frame_->SetRoutingResponse(
       AdapterManager::GetRoutingResponse()->GetLatestObserved());
   ADEBUG << "Get routing: "
@@ -70,10 +76,12 @@ Status Planning::InitFrame(const uint32_t sequence_num, const double timestamp,
   if (FLAGS_enable_prediction && !AdapterManager::GetPrediction()->Empty()) {
     const auto& prediction =
         AdapterManager::GetPrediction()->GetLatestObserved();
+        //设置预测信息
     frame_->SetPrediction(prediction);
     ADEBUG << "Get prediction: " << prediction.DebugString();
   }
 
+  //frame初始化
   auto status = frame_->Init(config_, timestamp);
   if (!status.ok()) {
     AERROR << "failed to init frame";
@@ -92,47 +100,61 @@ bool Planning::HasSignalLight(const PlanningConfig& config) {
 }
 
 Status Planning::Init() {
+  //变量pnc_map_获取BaseMap
   pnc_map_.reset(new hdmap::PncMap(apollo::hdmap::BaseMapFile()));
+  //使用BaseMap设置Frame类中的变量pnc_map_
   Frame::SetMap(pnc_map_.get());
 
+  //规划器配置文件modules/planning/conf/planning_config.pb.txt设置config_。
   CHECK(apollo::common::util::GetProtoFromFile(FLAGS_planning_config_file,
                                                &config_))
       << "failed to load planning config file " << FLAGS_planning_config_file;
-  if (!AdapterManager::Initialized()) {
+
+  //第一次调用返回false，然后使用modules/planning/conf/adapter.conf配置，定义收发话题。
+  if (!AdapterManager::Initialized()) {       
     AdapterManager::Init(FLAGS_adapter_config_filename);
   }
+
+  //判断localization话题是否存在。
   if (AdapterManager::GetLocalization() == nullptr) {
     std::string error_msg("Localization is not registered");
     AERROR << error_msg;
     return Status(ErrorCode::PLANNING_ERROR, error_msg);
   }
+  //判断Chassis话题是否存在。
   if (AdapterManager::GetChassis() == nullptr) {
     std::string error_msg("Chassis is not registered");
     AERROR << error_msg;
     return Status(ErrorCode::PLANNING_ERROR, error_msg);
   }
+  //判断RoutingResponse话题是否存在。
   if (AdapterManager::GetRoutingResponse() == nullptr) {
     std::string error_msg("RoutingResponse is not registered");
     AERROR << error_msg;
     return Status(ErrorCode::PLANNING_ERROR, error_msg);
   }
+  //判断Prediction话题是否存在。
   if (FLAGS_enable_prediction && AdapterManager::GetPrediction() == nullptr) {
     std::string error_msg("Prediction is not registered");
     AERROR << error_msg;
     return Status(ErrorCode::PLANNING_ERROR, error_msg);
   }
+  //判断TrafficLight话题是否存在。
   if (HasSignalLight(config_) &&
       AdapterManager::GetTrafficLightDetection() == nullptr) {
     std::string error_msg("Traffic Light Detection is not registered");
     AERROR << error_msg;
     return Status(ErrorCode::PLANNING_ERROR, error_msg);
   }
+  //判断是否使用ReferenceLineProvider，默认关闭。
   if (FLAGS_enable_reference_line_provider_thread) {
     ReferenceLineProvider::instance()->Init(
         pnc_map_.get(), config_.reference_line_smoother_config());
   }
 
+  //注册规划器。
   RegisterPlanners();
+  //创建EM规划器，创建之前应该先注册。
   planner_ = planner_factory_.CreateObject(config_.planner_type());
   if (!planner_) {
     return Status(
@@ -140,6 +162,7 @@ Status Planning::Init() {
         "planning is not initialized with config : " + config_.DebugString());
   }
 
+  //初始化规划器EM
   return planner_->Init(config_);
 }
 
@@ -154,10 +177,13 @@ bool Planning::IsVehicleStateValid(const common::VehicleState& vehicle_state) {
   return true;
 }
 
+
 Status Planning::Start() {
+   //判断是否使用ReferenceLineProvider，默认关闭。
   if (FLAGS_enable_reference_line_provider_thread) {
     ReferenceLineProvider::instance()->Start();
   }
+  //创建timer周期规划线路。
   timer_ = AdapterManager::CreateTimer(
       ros::Duration(1.0 / FLAGS_planning_loop_rate), &Planning::OnTimer, this);
   return Status::OK();
@@ -166,7 +192,9 @@ Status Planning::Start() {
 void Planning::OnTimer(const ros::TimerEvent&) {
   RunOnce();
   if (frame_) {
+    //获取当前帧的序号
     auto seq_num = frame_->SequenceNum();
+    //将当前帧添加到FrameHistory中    
     FrameHistory::instance()->Add(seq_num, std::move(frame_));
   }
 }
@@ -181,8 +209,12 @@ void Planning::PublishPlanningPb(ADCTrajectory* trajectory_pb,
 }
 
 void Planning::RunOnce() {
+  //记下起始时间
   const double start_timestamp = Clock::NowInSecond();
+  //查看节点信息
   AdapterManager::Observe();
+
+  //检查planning的依赖节点是否ready。
   ADCTrajectory not_ready_pb;
   auto* not_ready = not_ready_pb.mutable_decision()
                         ->mutable_main_decision()
@@ -203,6 +235,7 @@ void Planning::RunOnce() {
     return;
   }
 
+  //查看定位和车辆信息，更新车辆状态。
   // localization
   const auto& localization =
       AdapterManager::GetLocalization()->GetLatestObserved();
@@ -224,26 +257,34 @@ void Planning::RunOnce() {
     return;
   }
 
+  //判断是否使用ReferenceLineProvider，如果使用，用之更新routing信息。
   // update routing
-  if (FLAGS_enable_reference_line_provider_thread) {
+  if (FLAGS_enable_reference_line_provider_thread) {    
     ReferenceLineProvider::instance()->UpdateRoutingResponse(
         AdapterManager::GetRoutingResponse()->GetLatestObserved());
   }
 
   const double planning_cycle_time = 1.0 / FLAGS_planning_loop_rate;
 
+  //判断是否采用自动驾驶模式。
   bool is_auto_mode = chassis.driving_mode() == chassis.COMPLETE_AUTO_DRIVE;
+  //由驾驶模式、起始时间点、规划周期和历史轨迹，计算一条缝合轨迹stitching_trajectory
   const auto& stitching_trajectory =
       TrajectoryStitcher::ComputeStitchingTrajectory(
           is_auto_mode, start_timestamp, planning_cycle_time,
           last_publishable_trajectory_.get());
 
+  //这里的frame_num产生机制不大明白
   const uint32_t frame_num = AdapterManager::GetPlanning()->GetSeqNum() + 1;
+  //由帧号、起始时间点和缝合轨迹最末一个点初始化frame_，相当于构建局部地图。
   status = InitFrame(frame_num, start_timestamp, stitching_trajectory.back());
+  //定义最终要求的轨迹trajectory_pb
   ADCTrajectory trajectory_pb;
+  //打开轨迹debug feature。
   if (FLAGS_enable_record_debug) {
     frame_->RecordInputDebug(trajectory_pb.mutable_debug());
   }
+  //设置trajectory_pb的时间戳
   trajectory_pb.mutable_latency_stats()->set_init_frame_time_ms(
       Clock::NowInSecond() - start_timestamp);
   if (!status.ok()) {
@@ -257,14 +298,17 @@ void Planning::RunOnce() {
     return;
   }
 
+  //由开始时间点、缝合轨迹、开始规划，设置trajectory_pb
   status = Plan(start_timestamp, stitching_trajectory, &trajectory_pb);
 
+  //计算规划耗时。
   const auto time_diff_ms = (Clock::NowInSecond() - start_timestamp) * 1000;
   ADEBUG << "total planning time spend: " << time_diff_ms << " ms.";
 
   trajectory_pb.mutable_latency_stats()->set_total_time_ms(time_diff_ms);
   ADEBUG << "Planning latency: " << trajectory_pb.latency_stats().DebugString();
 
+  //发布规划结果。
   if (status.ok()) {
     PublishPlanningPb(&trajectory_pb, start_timestamp);
     ADEBUG << "Planning succeeded:" << trajectory_pb.header().DebugString();
@@ -291,22 +335,27 @@ void Planning::SetLastPublishableTrajectory(
   last_publishable_trajectory_.reset(new PublishableTrajectory(adc_trajectory));
 }
 
+//由当前时间点和缝合轨迹计算最终的轨迹trajectory_pb
 common::Status Planning::Plan(
     const double current_time_stamp,
     const std::vector<common::TrajectoryPoint>& stitching_trajectory,
     ADCTrajectory* trajectory_pb) {
+  //使用stitching_trajectory的debug项设置trajectory_pb的
   auto* ptr_debug = trajectory_pb->mutable_debug();
   if (FLAGS_enable_record_debug) {
     ptr_debug->mutable_planning_data()->mutable_init_point()->CopyFrom(
         stitching_trajectory.back());
   }
   auto status = Status::OK();
+  //每条参考线路都会规划一次，参考线路来源于ReferenceLineProvider或者routing，默认是routing
   for (auto& reference_line_info : frame_->reference_line_info()) {
+    //在这里调用EM具体的规划器EMPlanner::Plan()函数
     status = planner_->Plan(stitching_trajectory.back(), frame_.get(),
                             &reference_line_info);
     AERROR_IF(!status.ok()) << "planner failed to make a driving plan.";
   }
 
+  //获取最优化参考路径best_reference_line，这里的参考路径应该是plan之后的。
   const auto* best_reference_line = frame_->FindDriveReferenceLineInfo();
   if (!best_reference_line) {
     std::string msg(
@@ -317,7 +366,9 @@ common::Status Planning::Plan(
     return Status(ErrorCode::PLANNING_ERROR, msg);
   }
 
+  //使用best_reference_line的debug配置trajectory_pb的debug配置。
   ptr_debug->MergeFrom(best_reference_line->debug());
+  //使用best_reference_line的latency配置trajectory_pb的latency配置。
   trajectory_pb->mutable_latency_stats()->MergeFrom(
       best_reference_line->latency_stats());
 

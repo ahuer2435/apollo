@@ -31,6 +31,7 @@ namespace planning {
 using apollo::common::TrajectoryPoint;
 using apollo::common::VehicleState;
 
+//重置缝合轨迹为车辆当前位置。
 std::vector<TrajectoryPoint>
 TrajectoryStitcher::ComputeReinitStitchingTrajectory() {
   const auto& vehicle_state = *common::VehicleState::instance();
@@ -51,6 +52,13 @@ TrajectoryStitcher::ComputeReinitStitchingTrajectory() {
 // if 1. the auto-driving mode is off or
 //    2. we don't have the trajectory from last planning cycle or
 //    3. the position deviation from actual and target is too high
+/*
+ 若非自动驾驶模式/没有历史轨迹点/匹配点距离太远
+ 从当前车辆状态获取point位置，然后再从当前位置进行路径规划。
+ 保存预测轨迹，然后用于下一次预测。
+ input：驾驶模式，当前时间点，规划周期，历史轨迹。
+ output：缝合轨迹
+*/
 std::vector<TrajectoryPoint> TrajectoryStitcher::ComputeStitchingTrajectory(
     const bool is_on_auto_mode, const double current_timestamp,
     const double planning_cycle_time,

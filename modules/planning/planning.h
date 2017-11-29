@@ -110,7 +110,7 @@ class Planning : public apollo::common::ApolloApp {
 
   std::unique_ptr<Frame> frame_;
 
-  std::unique_ptr<Planner> planner_;
+  std::unique_ptr<Planner> planner_;    //由工厂方法模式创建的路径规划实例。
 
   std::unique_ptr<PublishableTrajectory> last_publishable_trajectory_;
 
