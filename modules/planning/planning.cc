@@ -52,6 +52,8 @@ void Planning::RegisterPlanners() {
 }
 
 //这里的frame是否相当于局部地图
+//这里使用的订阅话题中的数据，包括规划起始点init_adc_point，av的初始位置，routing的全局路径，预测信息prediction，这些信息
+//都会加入frame中。
 Status Planning::InitFrame(const uint32_t sequence_num, const double timestamp,
                            const TrajectoryPoint& init_adc_point) {
   //创建frame，使用sequence_num作为参数。
@@ -190,7 +192,7 @@ Status Planning::Start() {
 }
 
 void Planning::OnTimer(const ros::TimerEvent&) {
-  RunOnce();
+  RunOnce();        //规划线路
   if (frame_) {
     //获取当前帧的序号
     auto seq_num = frame_->SequenceNum();
@@ -204,6 +206,7 @@ void Planning::PublishPlanningPb(ADCTrajectory* trajectory_pb,
   AdapterManager::FillPlanningHeader(Name(), trajectory_pb);
   trajectory_pb->mutable_header()->set_timestamp_sec(timestamp);
   // TODO(all): integrate reverse gear
+  //设置trajectory_pb中的gear。
   trajectory_pb->set_gear(canbus::Chassis::GEAR_DRIVE);
   AdapterManager::PublishPlanning(*trajectory_pb);
 }
@@ -336,11 +339,19 @@ void Planning::SetLastPublishableTrajectory(
 }
 
 //由当前时间点和缝合轨迹计算最终的轨迹trajectory_pb
+//设置trajectory_pb中的项如下：
+/*
+1. debug：plan所需要全部信息
+2. latency_stats：包含规划总时间，初始化frame时间（构建局部地图），task状态
+3. decision:包含车辆的制动信息。
+4. trajectory_point
+5. is_replan
+*/
 common::Status Planning::Plan(
     const double current_time_stamp,
     const std::vector<common::TrajectoryPoint>& stitching_trajectory,
     ADCTrajectory* trajectory_pb) {
-  //使用stitching_trajectory的debug项设置trajectory_pb的
+  //使用stitching_trajectory的数据设置trajectory_pb的init_point
   auto* ptr_debug = trajectory_pb->mutable_debug();
   if (FLAGS_enable_record_debug) {
     ptr_debug->mutable_planning_data()->mutable_init_point()->CopyFrom(
@@ -366,12 +377,14 @@ common::Status Planning::Plan(
     return Status(ErrorCode::PLANNING_ERROR, msg);
   }
 
-  //使用best_reference_line的debug配置trajectory_pb的debug配置。
+  //debug()函数中包含plan所需要全部信息。
+  //使用best_reference_line的debug数据设置trajectory_pb的debug
   ptr_debug->MergeFrom(best_reference_line->debug());
-  //使用best_reference_line的latency配置trajectory_pb的latency配置。
+  //使用best_reference_line的latency配置trajectory_pb的latency_stats配置。
   trajectory_pb->mutable_latency_stats()->MergeFrom(
       best_reference_line->latency_stats());
 
+  //使用best_reference_line中的ExportDecision设置trajectory_pb中的decision。
   best_reference_line->ExportDecision(trajectory_pb->mutable_decision());
 
   // Add debug information.
@@ -390,13 +403,16 @@ common::Status Planning::Plan(
     }
   }
 
+  //创建一条可以发布的轨迹best_reference_line->trajectory
   last_publishable_trajectory_.reset(new PublishableTrajectory(
       current_time_stamp, best_reference_line->trajectory()));
 
   last_publishable_trajectory_->PrependTrajectoryPoints(
       stitching_trajectory.begin(), stitching_trajectory.end() - 1);
 
+  //设置trajectory_pb中的trajectory_point
   last_publishable_trajectory_->PopulateTrajectoryProtobuf(trajectory_pb);
+  //设置trajectory_pb中的is_replan
   trajectory_pb->set_is_replan(stitching_trajectory.size() == 1);
 
   return status;

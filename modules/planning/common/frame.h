@@ -52,6 +52,7 @@ class Frame {
   explicit Frame(const uint32_t sequence_num);
 
   // functions called out of optimizers
+  //这四个函数是用于获取话题数据的。
   void SetRoutingResponse(const routing::RoutingResponse &routing);
   void SetPrediction(const prediction::PredictionObstacles &prediction);
   void SetPlanningStartPoint(const common::TrajectoryPoint &start_point);

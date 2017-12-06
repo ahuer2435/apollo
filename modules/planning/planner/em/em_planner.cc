@@ -107,21 +107,32 @@ void EMPlanner::RecordDebugInfo(const std::string& name,
   ptr_stats->set_time_ms(time_diff_ms);
 }
 
+/*
+参数：planning_start_point:输入，读。
+	  planning_start_point：写。
+	  reference_line_info：写
+	  
+*/
+
 Status EMPlanner::Plan(const TrajectoryPoint& planning_start_point,
                        Frame* frame, ReferenceLineInfo* reference_line_info) {
+	//判断frame是否为null
   if (!frame) {
     AERROR << "Frame is empty in EMPlanner";
     return Status(ErrorCode::PLANNING_ERROR, "Frame is null");
   }
 
   ADEBUG << "planning start point:" << planning_start_point.DebugString();
+  //获取reference_line_info的speed_data，heuristic_speed_data.
   auto* heuristic_speed_data = reference_line_info->mutable_speed_data();
+  //产生speed profile，speed_profile
   auto speed_profile =
       GenerateInitSpeedProfile(planning_start_point, reference_line_info);
   if (speed_profile.empty()) {
     speed_profile = GenerateSpeedHotStart(planning_start_point);
     ADEBUG << "Using dummy hot start for speed vector";
   }
+  //设置reference_line_info中的speed_vector
   heuristic_speed_data->set_speed_vector(speed_profile);
 
   auto ptr_debug = reference_line_info->mutable_debug();
@@ -129,7 +140,7 @@ Status EMPlanner::Plan(const TrajectoryPoint& planning_start_point,
   auto ret = Status::OK();
   for (auto& optimizer : tasks_) {
     const double start_timestamp = Clock::NowInSecond();
-    //
+    //调用各个task的处理函数。
     ret = optimizer->Execute(frame, reference_line_info);
     if (!ret.ok()) {
       AERROR << "Failed to run tasks[" << optimizer->Name()
@@ -149,6 +160,7 @@ Status EMPlanner::Plan(const TrajectoryPoint& planning_start_point,
     }
   }
   DiscretizedTrajectory trajectory;
+  //在这里设置trajectory
   if (!reference_line_info->CombinePathAndSpeedProfile(
           FLAGS_output_trajectory_time_resolution,
           planning_start_point.relative_time(), &trajectory)) {

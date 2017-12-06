@@ -138,6 +138,7 @@ std::unique_ptr<PathObstacle> ReferenceLineInfo::CreatePathObstacle(
   return path_obstacle;
 }
 
+//离散轨道
 const DiscretizedTrajectory& ReferenceLineInfo::trajectory() const {
   return discretized_trajectory_;
 }

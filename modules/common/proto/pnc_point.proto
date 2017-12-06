@@ -28,7 +28,7 @@ message SpeedPoint {
 }
 
 message PathPoint {
-  // coordinates
+  // coordinates坐标
   optional double x = 1;
   optional double y = 2;
   optional double z = 3;
@@ -36,11 +36,12 @@ message PathPoint {
   // direction on the x-y plane
   optional double theta = 4;
   // curvature on the x-y planning
+  //曲率
   optional double kappa = 5;
   // accumulated distance from beginning of the path
   optional double s = 6;
 
-  // derivative of kappa w.r.t s.
+  // 导数derivative of kappa w.r.t s.
   optional double dkappa = 7;
   // derivative of derivative of kappa w.r.t s.
   optional double ddkappa = 8;
