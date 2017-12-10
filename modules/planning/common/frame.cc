@@ -92,7 +92,6 @@ std::list<ReferenceLineInfo> &Frame::reference_line_info() {
   return reference_line_info_;
 }
 
-//通过reference_lines设置reference_line_info_
 bool Frame::InitReferenceLineInfo(
     const std::vector<ReferenceLine> &reference_lines) {
   reference_line_info_.clear();
@@ -153,7 +152,9 @@ const Obstacle *Frame::CreateDestinationObstacle() {
   return AddStaticVirtualObstacle(FLAGS_destination_obstacle_id,
                                   destination_box);
 }
-
+/*
+  Planning::InitFrame()--->Frame::Init()
+*/
 Status Frame::Init(const PlanningConfig &config,
                    const double current_time_stamp) {
   if (!pnc_map_) {
@@ -172,6 +173,7 @@ Status Frame::Init(const PlanningConfig &config,
   if (FLAGS_enable_reference_line_provider_thread) {
     reference_lines = ReferenceLineProvider::instance()->GetReferenceLines();
   } else {
+    //在这里从routing中创建了reference_lines，现阶段只创建一个。
     reference_lines = CreateReferenceLineFromRouting(init_pose_.position(),
                                                      routing_response_);
   }
@@ -188,21 +190,26 @@ Status Frame::Init(const PlanningConfig &config,
   if (FLAGS_align_prediction_time) {
     AlignPredictionTime(current_time_stamp);
   }
+  //从预测信息prediction_中提取障碍物信息obstacles_。
   if (FLAGS_enable_prediction) {
     CreatePredictionObstacles(prediction_);
   }
 
+  //在目标点设置一个虚拟的障碍物。
   if (!CreateDestinationObstacle()) {
     AERROR << "Failed to create the destination obstacle";
     return Status(ErrorCode::PLANNING_ERROR, "failed to find destination");
   }
 
+  //检查冲突，如果有冲突，设置冲突障碍物的id：collision_obstacle_id_
   if (CheckCollision()) {
     AERROR << "Found collision with obstacle: " << collision_obstacle_id_;
     return Status(ErrorCode::PLANNING_ERROR,
                   "Collision found with " + collision_obstacle_id_);
   }
 
+//通过reference_lines设置reference_line_info_
+//reference_line_info_是一个集合，每个元素包含一个pnc_map_，一个reference_line和一个planning_start_point_。个数与reference_line一致。
   if (!InitReferenceLineInfo(reference_lines)) {
     AERROR << "Failed to init reference line info";
     return Status(ErrorCode::PLANNING_ERROR,
