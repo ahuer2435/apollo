@@ -30,6 +30,7 @@ using apollo::common::time::Clock;
 using apollo::common::Status;
 using apollo::common::ErrorCode;
 
+//apollo默认的两个控制器，横向控制器和纵向控制器。
 void ControllerAgent::RegisterControllers() {
   controller_factory_.Register(
       ControlConf::LAT_CONTROLLER,

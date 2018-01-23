@@ -32,6 +32,7 @@ using apollo::common::ErrorCode;
 using apollo::common::Status;
 
 RTKReplayPlanner::RTKReplayPlanner() {
+  //"modules/planning/data/garage.csv"
   ReadTrajectoryFile(FLAGS_rtk_trajectory_filename);
 }
 
@@ -48,21 +49,26 @@ Status RTKReplayPlanner::Plan(const TrajectoryPoint& planning_init_point,
     return Status(ErrorCode::PLANNING_ERROR, msg);
   }
 
+  //计算匹配点id，起始点
   std::uint32_t matched_index =
       QueryPositionMatchedPoint(planning_init_point, complete_rtk_trajectory_);
 
+  //rtk_trajectory_forward ：800，获取发送的轨迹点数
   std::uint32_t forward_buffer = FLAGS_rtk_trajectory_forward;
+  //计算结束点id
   std::uint32_t end_index =
       matched_index + forward_buffer >= complete_rtk_trajectory_.size()
           ? complete_rtk_trajectory_.size() - 1
           : matched_index + forward_buffer - 1;
 
   //  auto* trajectory_points = trajectory_pb->mutable_trajectory_point();
+  //轨迹点index转化为实际轨迹点
   std::vector<TrajectoryPoint> trajectory_points(
       complete_rtk_trajectory_.begin() + matched_index,
       complete_rtk_trajectory_.begin() + end_index + 1);
 
   // reset relative time
+  //计算了相对时间，以第一个点时间为基准0
   double zero_time = complete_rtk_trajectory_[matched_index].relative_time();
   for (auto& trajectory_point : trajectory_points) {
     trajectory_point.set_relative_time(trajectory_point.relative_time() -
@@ -76,6 +82,7 @@ Status RTKReplayPlanner::Plan(const TrajectoryPoint& planning_init_point,
          static_cast<std::size_t>(FLAGS_rtk_trajectory_forward)) {
     const auto& last_point = trajectory_points.rbegin();
     auto new_point = last_point;
+    //FLAGS_trajectory_resolution: 0.01
     new_point->set_relative_time(new_point->relative_time() +
                                  FLAGS_trajectory_resolution);
     trajectory_points.push_back(*new_point);
@@ -84,6 +91,7 @@ Status RTKReplayPlanner::Plan(const TrajectoryPoint& planning_init_point,
   return Status::OK();
 }
 
+//将轨迹文件中的数据读入内存，存入complete_rtk_trajectory_，格式std::vector<common::TrajectoryPoint>
 void RTKReplayPlanner::ReadTrajectoryFile(const std::string& filename) {
   if (!complete_rtk_trajectory_.empty()) {
     complete_rtk_trajectory_.clear();
@@ -135,6 +143,7 @@ void RTKReplayPlanner::ReadTrajectoryFile(const std::string& filename) {
   file_in.close();
 }
 
+//返回与起始点最接近的index号。
 std::uint32_t RTKReplayPlanner::QueryPositionMatchedPoint(
     const TrajectoryPoint& start_point,
     const std::vector<TrajectoryPoint>& trajectory) const {

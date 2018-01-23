@@ -10,4 +10,4 @@
   * HMI AUTO mode change request
 
 ## Output
-  * control command (steering, throttle, brake) to canbus.
+  * control command (steering, throttle, brake)（转向，油门，刹车） to canbus.

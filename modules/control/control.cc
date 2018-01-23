@@ -46,11 +46,14 @@ std::string Control::Name() const {
 
 Status Control::Init() {
   AINFO << "Control init, starting ...";
+  //FLAGS_control_conf_file:modules/control/conf/lincoln.pb.txt
+  //lat_controller和lon_controller配置。横向和纵向控制器的配置。 
   CHECK(common::util::GetProtoFromFile(FLAGS_control_conf_file, &control_conf_))
       << "Unable to load control conf file: " + FLAGS_control_conf_file;
 
   AINFO << "Conf file: " << FLAGS_control_conf_file << " is loaded.";
 
+  //节点话题。
   AdapterManager::Init(FLAGS_adapter_config_filename);
 
   apollo::common::monitor::MonitorBuffer buffer(&monitor_);
@@ -62,6 +65,7 @@ Status Control::Init() {
     return Status(ErrorCode::CONTROL_INIT_ERROR, error_msg);
   }
 
+  //检测依赖数据是否ok
   // lock it in case for after sub, init_vehicle not ready, but msg trigger
   // come
   CHECK(AdapterManager::GetLocalization())
@@ -76,6 +80,7 @@ Status Control::Init() {
   CHECK(AdapterManager::GetControlCommand())
       << "ControlCommand publisher is not initialized.";
 
+  //注册Pad和monitor的回调函数。
   AdapterManager::AddPadCallback(&Control::OnPad, this);
   AdapterManager::AddMonitorCallback(&Control::OnMonitor, this);
 
@@ -96,6 +101,7 @@ Status Control::Start() {
         << DrivingAction_Name(control_conf_.action());
   pad_msg_.set_action(control_conf_.action());
 
+  //定时器回调函数
   timer_ = AdapterManager::CreateTimer(
       ros::Duration(control_conf_.control_period()), &Control::OnTimer, this);
 
@@ -161,6 +167,7 @@ Status Control::ProduceControlCommand(ControlCommand *control_command) {
     debug->mutable_canbus_header()->CopyFrom(chassis_.header());
     debug->mutable_trajectory_header()->CopyFrom(trajectory_.header());
 
+    //通过controller_agent_调用所有控制器的核心计算函数。
     Status status_compute = controller_agent_.ComputeControlCommand(
         &localization_, &chassis_, &trajectory_, control_command);
 
@@ -212,6 +219,7 @@ void Control::OnTimer(const ros::TimerEvent &) {
   ADEBUG << "control cycle time is: " << time_diff_ms << " ms.";
   status.Save(control_command.mutable_header()->mutable_status());
 
+  //发送控制指令。
   SendCmd(&control_command);
 }
 

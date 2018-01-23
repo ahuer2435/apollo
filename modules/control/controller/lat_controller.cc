@@ -263,6 +263,7 @@ std::string LatController::Name() const {
   return name_;
 }
 
+//控制器核心，由定位信息、车辆信息、规划路径计算出控制指令。
 Status LatController::ComputeControlCommand(
     const localization::LocalizationEstimate *localization,
     const canbus::Chassis *chassis,
