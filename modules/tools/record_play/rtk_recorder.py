@@ -15,6 +15,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ###############################################################################
+
+"""
+使用GPS和IMU实现轨迹点记录
+"""
 """
 Record GPS and IMU data
 """
@@ -39,7 +43,8 @@ class RtkRecord(object):
     """
     rtk recording class
     """
-
+    
+    #数据记录到文件。
     def write(self, data):
         """wrap file write function to flush data to disk"""
         self.file_handler.write(data)
@@ -51,6 +56,7 @@ class RtkRecord(object):
         self.record_file = record_file
         self.logger.info("Record file to: " + record_file)
 
+        #初始化文件句柄。
         try:
             self.file_handler = open(record_file, 'w')
         except:
@@ -58,9 +64,11 @@ class RtkRecord(object):
             self.file_handler.close()
             sys.exit()
 
+	#轨迹点数据项
         self.write("x,y,z,speed,acceleration,curvature,"\
                         "curvature_change_rate,time,theta,gear,s,throttle,brake,steering\n")
 
+	#定位信息和车辆信息
         self.localization = localization_pb2.LocalizationEstimate()
         self.chassis = chassis_pb2.Chassis()
         self.chassis_received = False
@@ -73,6 +81,7 @@ class RtkRecord(object):
 
         self.prev_carspeed = 0.0
 
+#将self.chassis，将chassis_received置为True
     def chassis_callback(self, data):
         """
         New message received
@@ -83,6 +92,7 @@ class RtkRecord(object):
 
         self.chassis.CopyFrom(data)
         #self.chassis = data
+	#判断是否为数字
         if math.isnan(self.chassis.speed_mps):
             self.logger.warning("find nan speed_mps: %s" % str(self.chassis))
         if math.isnan(self.chassis.steering_percentage):
@@ -103,6 +113,7 @@ class RtkRecord(object):
                 "chassis not received when localization is received")
             return
 
+	#设置self.localization
         self.localization.CopyFrom(data)
         #self.localization = data
         carx = self.localization.pose.position.x
@@ -116,6 +127,7 @@ class RtkRecord(object):
             self.logger.warning(
                 "find nan steering_percentage: %s" % str(self.chassis))
             return
+	#车速数据来源于chassis
         carspeed = self.chassis.speed_mps
         caracceleration = self.localization.pose.linear_acceleration_vrf.y
 
@@ -183,9 +195,12 @@ def main(argv):
         use_stdout=True,
         log_level=logging.DEBUG)
     print("runtime log is in %s%s" % (log_dir, "rtk_recorder.log"))
+    #输出为以逗号分割的数据文件。
     record_file = log_dir + "/garage.csv"
+    #记录功能的实现。
     recorder = RtkRecord(record_file)
     atexit.register(recorder.shutdown)
+    #定位算法，输入数据为定位信息和车辆信息。
     rospy.Subscriber('/apollo/canbus/chassis', chassis_pb2.Chassis,
                      recorder.chassis_callback)
 
