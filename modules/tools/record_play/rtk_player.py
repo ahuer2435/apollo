@@ -73,6 +73,7 @@ class RtkPlayer(object):
         self.localization_received = False
         self.chassis_received = False
 
+	#发布规划的轨迹数据
         self.planning_pub = rospy.Publisher(
             '/apollo/planning', planning_pb2.ADCTrajectory, queue_size=1)
 
@@ -148,6 +149,7 @@ class RtkPlayer(object):
         search_start = max(self.start - SEARCH_INTERVAL / 2, 0)
         search_end = min(self.start + SEARCH_INTERVAL / 2, len(self.data))
         start = self.start
+	#寻找离self.carx和self.cary最近的点，即与当前位置匹配的点
         for i in range(search_start, search_end):
             dist_sqr = (self.carx - self.data['x'][i]) ** 2 + \
                    (self.cary - self.data['y'][i]) ** 2
@@ -214,6 +216,7 @@ class RtkPlayer(object):
             "publish_planningmsg: after adjust start: self.start = %s, self.end=%s"
             % (self.start, self.end))
 
+	#计算起点到终点
         for i in range(self.start, self.end):
             adc_point = pnc_point_pb2.TrajectoryPoint()
             adc_point.path_point.x = self.data['x'][i]
