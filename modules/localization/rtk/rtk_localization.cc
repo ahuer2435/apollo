@@ -108,6 +108,7 @@ void RTKLocalization::OnTimer(const ros::TimerEvent &event) {
   last_received_timestamp_sec_ = common::time::ToSecond(Clock::Now());    //更新数据接受时间。
 }
 
+//返回值p：p1值占1.0 - frac1，p2占frac1。
 template <class T>
 T RTKLocalization::InterpolateXYZ(const T &p1, const T &p2,
                                   const double &frac1) {
@@ -141,6 +142,8 @@ bool RTKLocalization::FindMatchingIMU(const double gps_timestamp_sec,
 
   // scan imu buffer, find first imu message that is newer than the given
   // timestamp
+  //FLAGS_timestamp_sec_tolerance = 10e-7
+  //在imu_adapter中时间戳是按照从小到大排列。
   ImuAdapter::Iterator imu_it = imu_adapter->begin();
   for (; imu_it != imu_adapter->end(); ++imu_it) {
     if ((*imu_it)->header().timestamp_sec() - gps_timestamp_sec >
