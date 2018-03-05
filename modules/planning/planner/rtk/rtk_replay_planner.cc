@@ -38,8 +38,10 @@ RTKReplayPlanner::RTKReplayPlanner() {
 
 Status RTKReplayPlanner::Init(const PlanningConfig&) { return Status::OK(); }
 
+//planning_init_point 规划的的起始点，可视为车辆的位置。
 Status RTKReplayPlanner::Plan(const TrajectoryPoint& planning_init_point,
                               Frame*, ReferenceLineInfo* reference_line_info) {
+  //complete_rtk_trajectory_ 存储的是录制的轨迹点。
   if (complete_rtk_trajectory_.empty() || complete_rtk_trajectory_.size() < 2) {
     std::string msg(
         "RTKReplayPlanner doesn't have a recorded trajectory or "
