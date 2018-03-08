@@ -42,25 +42,30 @@ bool RTKReplayPlanner::Plan(
     return false;
   }
 
+  //求出与start_point最为近似的轨迹点的index。
   std::size_t matched_index =
       QueryPositionMatchedPoint(start_point, complete_rtk_trajectory_);
 
+  //计算出结束轨迹点。
   std::size_t forward_buffer = FLAGS_rtk_trajectory_forward;
   std::size_t end_index =
       matched_index + forward_buffer >= complete_rtk_trajectory_.size()
           ? complete_rtk_trajectory_.size() - 1
           : matched_index + forward_buffer - 1;
 
+  //清空轨迹点指针。
   if (ptr_discretized_trajectory->size() > 0) {
     ptr_discretized_trajectory->clear();
   }
 
+  //填充轨迹点。
   ptr_discretized_trajectory->insert(
       ptr_discretized_trajectory->begin(),
       complete_rtk_trajectory_.begin() + matched_index,
       complete_rtk_trajectory_.begin() + end_index + 1);
 
   // reset relative time
+  //以第一个轨迹点时间为0时刻，转换轨迹点。
   double zero_time = complete_rtk_trajectory_[matched_index].relative_time;;
   for (std::size_t i = 0; i < ptr_discretized_trajectory->size(); ++i) {
     (*ptr_discretized_trajectory)[i].relative_time -= zero_time;
@@ -69,6 +74,7 @@ bool RTKReplayPlanner::Plan(
   // check if the trajectory has enough points;
   // if not, append the last points multiple times and
   // adjust their corresponding time stamps.
+  //如果轨迹点不足FLAGS_rtk_trajectory_forward，使用最后一个轨迹点填充，并更新时间。
   while (ptr_discretized_trajectory->size() < FLAGS_rtk_trajectory_forward) {
     const auto& last_point = ptr_discretized_trajectory->back();
     ptr_discretized_trajectory->push_back(last_point);
@@ -127,6 +133,8 @@ void RTKReplayPlanner::ReadTrajectoryFile(const std::string& filename) {
   file_in.close();
 }
 
+//在所有轨迹点中寻找与start_point最近的点，然后把它看成其的近似。
+//寻找的方法是遍历轨迹点，求与start_point的距离，然后求出距离最小的点的index。
 std::size_t RTKReplayPlanner::QueryPositionMatchedPoint(
     const TrajectoryPoint& start_point,
     const std::vector<TrajectoryPoint>& trajectory) const {

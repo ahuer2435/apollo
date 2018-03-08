@@ -51,7 +51,7 @@ class RTKReplayPlanner : public Planner {
   /**
    * @brief Overrode function Plan in parent class Planner.
    * @param start_point The trajectory point where planning starts
-   * @param discretized_trajectory The computed trajectory
+   * @param ptr_trajectory The computed trajectory
    * @return true if planning succeeds; false otherwise.
    */
   bool Plan(const TrajectoryPoint& start_point,
