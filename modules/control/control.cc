@@ -198,11 +198,13 @@ Status Control::ProduceControlCommand(ControlCommand *control_command) {
   return status;
 }
 
+//定时器超时调用函数。
 void Control::OnTimer(const ros::TimerEvent &) {
   double start_timestamp = Clock::NowInSecond();
 
   ControlCommand control_command;
 
+//产生控制指令。
   Status status = ProduceControlCommand(&control_command);
   AERROR_IF(!status.ok()) << "Failed to produce control command:"
                           << status.error_message();
