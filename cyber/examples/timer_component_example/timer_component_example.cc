@@ -28,6 +28,7 @@ bool TimerComponentSample::Init() {
 bool TimerComponentSample::Proc() {
   static int i = 0;
   auto out_msg = std::make_shared<Driver>();
+  out_msg->set_content("hello apollo.");
   out_msg->set_msg_id(i++);
   driver_writer_->Write(out_msg);
   AINFO << "timer_component_example: Write drivermsg->"
