@@ -1,0 +1,44 @@
+flowchart TB
+  subgraph Process
+    MB[Mainboard]
+    MC[ModuleController]
+    PM[PluginManager]
+  end
+
+  subgraph Runtime
+    CMP[Component]
+    ND[Node API]
+    SCH[Scheduler]
+    CR[CRoutine]
+  end
+
+  subgraph TransportLayer
+    TR[Transport]
+    INTRA[Intra Dispatcher]
+    SHM[Shm Dispatcher]
+    RTPS[Rtps Dispatcher]
+    RC[Receiver]
+    WR[Transmitter]
+  end
+
+  subgraph Infra
+    SD["ServiceDiscovery/Topology"]
+    MSG["Message (header + payload)"]
+    STAT["Statistics / Profiler"]
+  end
+
+  MB --> MC --> PM --> CMP
+  CMP --> ND --> TR
+  TR --> INTRA
+  TR --> SHM
+  TR --> RTPS
+  INTRA --> RC
+  SHM --> RC
+  RTPS --> RC
+  RC --> ND
+  ND --> SCH --> CR --> CMP
+  CMP --> WR --> TR
+  ND --> SD
+  CMP --> STAT
+  SD --> TR
+  MSG --> RC

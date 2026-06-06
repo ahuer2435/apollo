@@ -1,0 +1,33 @@
+sequenceDiagram
+    participant MB as Mainboard
+    participant MC as ModuleController
+    participant PM as PluginManager
+    participant CMP as Component
+    participant ND as Node
+    participant TR as Transport
+    participant DS as Dispatcher
+    participant RC as Receiver
+    participant RD as Reader
+    participant SCH as Scheduler
+    participant CR as CRoutine
+    participant SRV as ServiceDiscovery
+    participant WR as Writer
+
+    MB->>MC: parse DAG & args, Init()
+    MC->>PM: request load modules
+    PM->>CMP: instantiate component (from plugin)
+    CMP->>ND: CreateReader/CreateWriter/CreateService
+    ND->>SRV: register role/topology
+    ND->>TR: CreateReceiver/CreateTransmitter
+    TR->>DS: dispatch to appropriate dispatcher (INTRA/SHM/RTPS)
+    DS->>RC: deliver messages to receiver
+    RC->>RD: push message to Reader queue
+    RD->>SCH: notify scheduler / create task (CRoutine)
+    SCH->>CR: schedule/run CRoutine
+    CR->>CMP: call Proc() (component processing)
+    CMP->>WR: write output message
+    WR->>TR: transmit (INTRA/SHM/RTPS)
+    TR->>DS: routing to other receivers (loop)
+
+%% 模块交互图（组件层次）
+ 

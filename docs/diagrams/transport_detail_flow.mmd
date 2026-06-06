@@ -1,0 +1,13 @@
+flowchart LR
+  Transport -- uses --> Participant[RTPS Participant]
+  Transport -- contains --> IntraTransmitter
+  Transport -- contains --> ShmTransmitter
+  Transport -- contains --> RtpsTransmitter
+  IntraTransmitter --> Dispatcher[IntraDispatcher]
+  ShmTransmitter --> Notifier[NotifierFactory]
+  RtpsTransmitter --> Participant
+  Dispatcher --> Receiver
+  Receiver --> Reader
+  Reader --> Scheduler
+  Scheduler --> CRoutine
+  CRoutine --> Component[Component/Proc]

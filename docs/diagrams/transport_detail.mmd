@@ -1,0 +1,43 @@
+sequenceDiagram
+    participant App as Application/Component
+    participant Node as Node
+    participant Transport as Transport
+    participant Part as Participant(RTPS)
+    participant IntraT as IntraTransmitter
+    participant ShmT as ShmTransmitter
+    participant RtpsT as RtpsTransmitter
+    participant Dispatcher as Dispatcher
+    participant Notifier as NotifierFactory
+    participant Receiver as Receiver
+    participant Reader as Reader
+    participant Scheduler as Scheduler
+    participant CRoutine as CRoutine
+
+    App->>Node: CreateWriter(role_attr, mode)
+    Node->>Transport: CreateTransmitter(attr, mode)
+    Transport->>Transport: ensure participant() & notifiers
+    alt mode == INTRA
+      Transport->>IntraT: new IntraTransmitter(attr)
+      IntraT->>Dispatcher: register to IntraDispatcher
+    else mode == SHM
+      Transport->>ShmT: new ShmTransmitter(attr)
+      ShmT->>Notifier: create SHM notifier
+      ShmT->>Dispatcher: register to ShmDispatcher
+    else mode == RTPS
+      Transport->>RtpsT: new RtpsTransmitter(attr, participant)
+      RtpsT->>Part: use RTPS Participant to publish
+      RtpsT->>Dispatcher: register to RtpsDispatcher
+    end
+    Note over Transport,Dispatcher: Transmitter.Enable() if non-HYBRID
+
+    %% Message write flow
+    App->>IntraT: writer->Write(msg)
+    IntraT->>Dispatcher: push(msg)
+    Dispatcher->>Receiver: deliver to Receiver(s)
+    Receiver->>Reader: push to Reader queue
+    Reader->>Scheduler: notify / create task
+    Scheduler->>CRoutine: schedule/run
+    CRoutine->>App: invoke Proc(msg)
+    App->>Writer: maybe Write(response)
+    Writer->>Transport: transmit (repeat)
+
