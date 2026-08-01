@@ -17,12 +17,16 @@
 ###############################################################################
 
 TOP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
-[[ -z ${APOLLO_ROOT_DIR} ]] && APOLLO_ROOT_DIR="${TOP_DIR}"
+# Source workspace: always use TOP_DIR as APOLLO_ROOT_DIR
+if [[ -f "${TOP_DIR}/WORKSPACE" ]]; then
+  APOLLO_ROOT_DIR="${TOP_DIR}"
+else
+  [[ -z ${APOLLO_ROOT_DIR} ]] && APOLLO_ROOT_DIR="${TOP_DIR}"
+fi
 APOLLO_IN_DOCKER=false
 # If inside docker container
 if [ -f /.dockerenv ]; then
   APOLLO_IN_DOCKER=true
-  [[ -z ${APOLLO_ROOT_DIR} ]] && APOLLO_ROOT_DIR="/apollo"
 fi
 
 export APOLLO_CONFIG_HOME="${APOLLO_CONFIG_HOME:=$HOME/.apollo}"
@@ -39,11 +43,11 @@ export APOLLO_LAUNCH_PATH="${APOLLO_ROOT_DIR}"
 export APOLLO_MODEL_PATH="${APOLLO_ROOT_DIR}/modules/perception/data/models"
 
 export APOLLO_DISTRIBUTION_VERSION=9.0
-export APOLLO_DISTRIBUTION_HOME="${APOLLO_DISTRIBUTION_HOME:=/apollo}"
-export APOLLO_PLUGIN_INDEX_PATH="${APOLLO_DISTRIBUTION_HOME}/share/cyber_plugin_index"
-export APOLLO_PLUGIN_SEARCH_IN_BAZEL_OUTPUT=1
-export APOLLO_PLUGIN_DESCRIPTION_PATH="${APOLLO_ROOT_DIR}"
-export APOLLO_PLUGIN_LIB_PATH="${APOLLO_ROOT_DIR}/bazel-bin:${APOLLO_DISTRIBUTION_HOME}/lib"
+export APOLLO_DISTRIBUTION_HOME="${APOLLO_DISTRIBUTION_HOME:=/opt/apollo/neo}"
+export APOLLO_PLUGIN_INDEX_PATH="${APOLLO_PLUGIN_INDEX_PATH:=${APOLLO_DISTRIBUTION_HOME}/share/cyber_plugin_index}"
+export APOLLO_PLUGIN_SEARCH_IN_BAZEL_OUTPUT="${APOLLO_PLUGIN_SEARCH_IN_BAZEL_OUTPUT:=1}"
+export APOLLO_PLUGIN_DESCRIPTION_PATH="${APOLLO_PLUGIN_DESCRIPTION_PATH:=${APOLLO_DISTRIBUTION_HOME}}"
+export APOLLO_PLUGIN_LIB_PATH="${APOLLO_PLUGIN_LIB_PATH:=${APOLLO_ROOT_DIR}/bazel-bin:${APOLLO_DISTRIBUTION_HOME}/lib}"
 
 export TAB="    " # 4 spaces
 
