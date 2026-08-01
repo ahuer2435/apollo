@@ -435,12 +435,15 @@ std::string GetFileName(const std::string &path, const bool remove_extension) {
 
 bool GetFilePathWithEnv(const std::string &path, const std::string &env_var,
                         std::string *file_path) {
+  AINFO << "yqdebug1: " << path << ",  " << env_var;
   if (path.empty()) {
+    AINFO << "yqdebug2 path empty";
     return false;
   }
   if (PathIsAbsolute(path)) {
     // an absolute path
     *file_path = path;
+    AINFO << "yqdebug3 absolute path: " << path;
     return PathExists(path);
   }
 
@@ -448,14 +451,17 @@ bool GetFilePathWithEnv(const std::string &path, const std::string &env_var,
   if (PathExists(path)) {
     // relative path exists
     *file_path = path;
+    AINFO << "yqdebug4 relative path exists: " << path;
     relative_path_exists = true;
   }
   if (path.front() == '.') {
     // relative path but not exist.
+    AINFO << "yqdebug5 relative path but not exist: " << path;
     return relative_path_exists;
   }
 
   const char *var = std::getenv(env_var.c_str());
+  AINFO << "yqdebug6 env " << env_var << " value: " << var;
   if (var == nullptr) {
     AWARN << "GetFilePathWithEnv: env " << env_var << " not found.";
     return relative_path_exists;
@@ -469,6 +475,7 @@ bool GetFilePathWithEnv(const std::string &path, const std::string &env_var,
     index = env_path.find(':', begin);
     auto p = env_path.substr(begin, index - begin);
     if (p.empty()) {
+      AINFO << "yqdebug7 env path empty";
       continue;
     }
     if (p.back() != '/') {
@@ -478,10 +485,12 @@ bool GetFilePathWithEnv(const std::string &path, const std::string &env_var,
     }
     if (PathExists(p)) {
       *file_path = p;
+      AINFO << "yqdebug8 env path exists: " << p;
       return true;
     }
     begin = index + 1;
   } while (index != std::string::npos);
+  AINFO << "yqdebug9 env path not found";
   return relative_path_exists;
 }
 
