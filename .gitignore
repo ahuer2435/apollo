@@ -84,4 +84,24 @@ tools/FlameGraph
 # dv plugins
 modules/studio_connector
 
+# buildtool generated
+dev/
+dumps/
+__MACOSX/
+setup.sh
+kill_all.sh
+apollo.doxygen
+.bazelrc
+WORKSPACE
+tools/package/dynamic_deps.bzl
+tools/proto/proto.bzl
+third_party/bazel_skylib
+third_party/grpc
+third_party/rules_proto
+third_party/rules_python
+modules/perception/data/models/
+
+# AEM
+.aem/
+
 #WORKSPACE
